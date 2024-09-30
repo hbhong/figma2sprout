@@ -138,7 +138,6 @@ impl FigmaClient {
             .on_input(Message::FileIDChanged)
             .padding(5.)
             .size(20);
-        // let text=text("Done!").size(20);
         let mut column = column!(token_input,file_id_input ).spacing(10);
         let parse_button = button("Parse").on_press(Message::ParseJson);
         column = column.push(parse_button);
@@ -163,5 +162,5 @@ fn main() {
     let access_token = "";
 
     let font = include_bytes!("../fonts/my_fonts.ttf");
-    iced::application("Figma2Code", FigmaClient::update, FigmaClient::view).font(font).centered().run();
+    iced::application("Figma2Sprout", FigmaClient::update, FigmaClient::view).font(font).centered().run();
 }
