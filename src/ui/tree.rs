@@ -2,7 +2,7 @@ use std::sync::Arc;
 use iced::{Element, Font};
 use iced::widget::{button, Button, Column};
 use iced_widget::{horizontal_space, row, text, Component};
-use figma_schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType};
+use crate::schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType};
 use crate::Message;
 
 
