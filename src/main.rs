@@ -1,5 +1,6 @@
 mod gen;
 mod ui;
+mod schema;
 
 use std::error::Error;
 use std::fs::File;
@@ -13,7 +14,7 @@ use iced::widget::{column, container, text_input};
 use iced_widget::{button, scrollable};
 use ui::tree::{parse_file_to_tree, NodeMessage, TreeNode};
 use crate::gen::node_util::{convert_json_to_figma, find_figma_node};
-use figma_schema::File as FigmaFile;
+use crate::schema::File as FigmaFile;
 
 fn fetch_figma_file(file_key: &str, access_token: &str) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
@@ -100,12 +101,16 @@ impl FigmaClient {
             }
             Message::ParseJson => {
                 if let Ok(json) = read_json_file("demo.json") {
-                    if let Ok(figma_file) = convert_json_to_figma(json) {
-                        let figma_file = Arc::new(figma_file);
-                        self.figma_file = Some(figma_file.clone());
-
-                        let result = Task::perform(parse_file_to_tree(figma_file), Message::JsonIsParsed);
-                        return result;
+                    match convert_json_to_figma(json){
+                        Ok(figma_file) => {
+                            let figma_file = Arc::new(figma_file);
+                            self.figma_file = Some(figma_file.clone());
+                            let result = Task::perform(parse_file_to_tree(figma_file), Message::JsonIsParsed);
+                            return result;
+                        }
+                        Err(e) => {
+                            println!("{}", e);
+                        }
                     }
                 }
                 Task::none()

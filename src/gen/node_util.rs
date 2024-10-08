@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use figma_schema::{File, Node};
+use crate::schema::{File, Node};
 use serde_json::from_str;
 use crate::ui::tree::TreeNode;
 
