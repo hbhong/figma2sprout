@@ -1,12 +1,13 @@
 use crate::schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType};
 use crate::Message;
-use iced::widget::{
-    button,
-    svg::{Handle, Svg},
-    Column, Container,
+use iced::{
+    widget::{
+        button, horizontal_space, row,
+        svg::{Handle, Svg},
+        text, Column, Container,
+    },
+    Element, Font, Length,
 };
-use iced::{Element, Font, Length};
-use iced_widget::{horizontal_space, row, text};
 
 use std::fs;
 use std::sync::Arc;
