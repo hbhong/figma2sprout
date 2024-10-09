@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use figma_schema::{Node, NodeType};
+use crate::schema::{File, Node, NodeType};
 pub trait Component {}
 
 pub trait ComponentGenerator {
