@@ -1,10 +1,12 @@
-use std::sync::Arc;
-use iced::{Element, Font};
-use iced::widget::{button, Button, Column};
-use iced_widget::{horizontal_space, row, text, Component};
 use crate::schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType};
 use crate::Message;
+use iced::widget::svg::{Handle, Svg};
+use iced::widget::{button, Column, Container};
+use iced::{Element, Font, Length};
+use iced_widget::{horizontal_space, row, text};
 
+use std::fs;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum NodeMessage {
@@ -25,6 +27,7 @@ pub struct TreeNode {
 pub enum NodeType {
     Unknown,
     Canvas,
+    Component,
     Instance,
     Frame,
     Text,
@@ -36,12 +39,19 @@ impl From<FigmaNodeType> for NodeType {
             FigmaNodeType::Instance => NodeType::Instance,
             FigmaNodeType::Frame => NodeType::Frame,
             FigmaNodeType::Text => NodeType::Text,
+            FigmaNodeType::Component => NodeType::Component,
             _ => NodeType::Unknown,
         }
     }
 }
 impl TreeNode {
-    pub fn new(name: String, node_type: NodeType, parent_path: String, id: String, node_paths: String) -> Self {
+    pub fn new(
+        name: String,
+        node_type: NodeType,
+        parent_path: String,
+        id: String,
+        node_paths: String,
+    ) -> Self {
         let id_paths = {
             if parent_path == "" {
                 id.clone()
@@ -81,20 +91,67 @@ impl TreeNode {
         const ICON_FONT: Font = Font::with_name("my_fonts");
         text(codepoint).font(ICON_FONT).into()
     }
+
+    fn type_svg(&self) -> Element<Message> {
+        let svg_path = match self.node_type {
+            NodeType::Canvas => "assets/canvas.svg",
+            NodeType::Component => "assets/component.svg",
+            NodeType::Instance => "assets/instance.svg",
+            NodeType::Frame => "assets/frame.svg",
+            NodeType::Text => "assets/text.svg",
+            NodeType::Unknown => "assets/unknown.svg",
+        };
+
+        let svg_content = fs::read_to_string(svg_path).unwrap_or_else(|e| {
+            eprintln!("Error reading SVG file {}: {}", svg_path, e);
+            String::from("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>") // 空的SVG
+        });
+
+        let handle = Handle::from_memory(svg_content.into_bytes());
+        let svg = Svg::new(handle).width(Length::Fixed(20.0));
+
+        Container::new(svg)
+            .padding(iced::Padding {
+                top: 5.0,
+                right: 0.0,
+                bottom: 5.0,
+                left: 5.0,
+            }) // 添加 5 像素的内边距
+            .into()
+    }
+
     pub fn view(&self) -> Element<Message> {
         // expand/collapse button
         let mut column = Column::new();
-        let expand_text = Self::icon(if self.is_expanded { '\u{E803}' } else { '\u{E802}' });
-        let expand_button = button(expand_text).style(button::text).width(22)
-            .on_press(Message::TreeNode(self.id_paths.clone(), NodeMessage::Toggle));
-        // label
-        let label = button(self.name.as_str()).style(button::text)
-            .on_press(Message::TreeNode(self.id_paths.clone(), NodeMessage::Select));
+        let expand_text = Self::icon(if self.is_expanded {
+            '\u{E803}'
+        } else {
+            '\u{E802}'
+        });
+        let expand_button =
+            button(expand_text)
+                .style(button::text)
+                .width(22)
+                .on_press(Message::TreeNode(
+                    self.id_paths.clone(),
+                    NodeMessage::Toggle,
+                ));
+
+        // 添加类型 SVG
+        let type_svg = self.type_svg();
+
+        // 标签
+        let label = button(self.name.as_str())
+            .style(button::text)
+            .on_press(Message::TreeNode(
+                self.id_paths.clone(),
+                NodeMessage::Select,
+            ));
         let path_depth = self.id_paths.split('|').collect::<Vec<_>>().len();
 
-
         let left_padding = horizontal_space().width((path_depth - 1) as u16 * 10);
-        column = column.push(row!(left_padding,expand_button,label));
+
+        column = column.push(row!(left_padding, expand_button, type_svg, label));
 
         if self.is_expanded {
             for child in &self.children {
@@ -127,7 +184,11 @@ pub async fn parse_file_to_tree(file: Arc<FigmaFile>) -> Result<Vec<TreeNode>, S
     Ok(result)
 }
 
-fn parse_node(node: &FigmaNode, parent_path: String, parent_node_paths: String) -> Result<TreeNode, String> {
+fn parse_node(
+    node: &FigmaNode,
+    parent_path: String,
+    parent_node_paths: String,
+) -> Result<TreeNode, String> {
     let name = node.name.clone();
     let node_type = node.r#type.into();
     let id = node.id.clone();
@@ -135,7 +196,11 @@ fn parse_node(node: &FigmaNode, parent_path: String, parent_node_paths: String) 
     let mut tree_node = TreeNode::new(name, node_type, parent_path, id, node_paths);
     if let Some(children) = &node.children {
         for child in children {
-            if let Ok(child) = parse_node(child, tree_node.id_paths.clone(), tree_node.node_paths.clone()) {
+            if let Ok(child) = parse_node(
+                child,
+                tree_node.id_paths.clone(),
+                tree_node.node_paths.clone(),
+            ) {
                 tree_node.children.push(child);
             }
         }
