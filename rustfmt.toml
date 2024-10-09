@@ -1,0 +1,29 @@
+# Basic settings
+max_width = 100
+tab_spaces = 4
+edition = "2021"
+
+# Import settings
+imports_granularity = "Crate"
+reorder_imports = true
+
+# Code style
+use_small_heuristics = "Max"
+fn_args_layout = "Tall"
+match_block_trailing_comma = true
+trailing_semicolon = true
+
+# Comment settings
+comment_width = 80
+wrap_comments = true
+
+# Special case handling
+merge_derives = true
+use_try_shorthand = true
+use_field_init_shorthand = true
+
+# Control flow formatting
+control_brace_style = "AlwaysSameLine"
+
+# Chained method calls
+chain_width = 60

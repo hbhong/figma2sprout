@@ -66,7 +66,7 @@ impl TreeNode {
         TreeNode {
             id: id.clone(),
             name,
-            node_type: node_type,
+            node_type,
             is_expanded: false,
             children: vec![],
             id_paths,
@@ -115,40 +115,24 @@ impl TreeNode {
         let svg = Svg::new(handle).width(Length::Fixed(20.0));
 
         Container::new(svg)
-            .padding(iced::Padding {
-                top: 5.0,
-                right: 0.0,
-                bottom: 5.0,
-                left: 5.0,
-            })
+            .padding(iced::Padding { top: 5.0, right: 0.0, bottom: 5.0, left: 5.0 })
             .into()
     }
 
     pub fn view(&self) -> Element<Message> {
         // expand/collapse button
         let mut column = Column::new();
-        let expand_text = Self::icon(if self.is_expanded {
-            '\u{E803}'
-        } else {
-            '\u{E802}'
-        });
-        let expand_button =
-            button(expand_text)
-                .style(button::text)
-                .width(22)
-                .on_press(Message::TreeNode(
-                    self.id_paths.clone(),
-                    NodeMessage::Toggle,
-                ));
+        let expand_text = Self::icon(if self.is_expanded { '\u{E803}' } else { '\u{E802}' });
+        let expand_button = button(expand_text)
+            .style(button::text)
+            .width(22)
+            .on_press(Message::TreeNode(self.id_paths.clone(), NodeMessage::Toggle));
 
         let type_svg = self.type_svg();
 
         let label = button(self.name.as_str())
             .style(button::text)
-            .on_press(Message::TreeNode(
-                self.id_paths.clone(),
-                NodeMessage::Select,
-            ));
+            .on_press(Message::TreeNode(self.id_paths.clone(), NodeMessage::Select));
         let path_depth = self.id_paths.split('|').collect::<Vec<_>>().len();
 
         let left_padding = horizontal_space().width((path_depth - 1) as u16 * 10);
@@ -167,8 +151,8 @@ impl TreeNode {
         match msg {
             NodeMessage::Toggle => {
                 self.is_expanded = !self.is_expanded;
-            }
-            NodeMessage::Select => {}
+            },
+            NodeMessage::Select => {},
         }
     }
 }
@@ -198,11 +182,9 @@ fn parse_node(
     let mut tree_node = TreeNode::new(name, node_type, parent_path, id, node_paths);
     if let Some(children) = &node.children {
         for child in children {
-            if let Ok(child) = parse_node(
-                child,
-                tree_node.id_paths.clone(),
-                tree_node.node_paths.clone(),
-            ) {
+            if let Ok(child) =
+                parse_node(child, tree_node.id_paths.clone(), tree_node.node_paths.clone())
+            {
                 tree_node.children.push(child);
             }
         }
