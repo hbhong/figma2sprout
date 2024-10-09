@@ -1,7 +1,10 @@
 use crate::schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType};
 use crate::Message;
-use iced::widget::svg::{Handle, Svg};
-use iced::widget::{button, Column, Container};
+use iced::widget::{
+    button,
+    svg::{Handle, Svg},
+    Column, Container,
+};
 use iced::{Element, Font, Length};
 use iced_widget::{horizontal_space, row, text};
 
@@ -104,7 +107,7 @@ impl TreeNode {
 
         let svg_content = fs::read_to_string(svg_path).unwrap_or_else(|e| {
             eprintln!("Error reading SVG file {}: {}", svg_path, e);
-            String::from("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>") // 空的SVG
+            String::from("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>")
         });
 
         let handle = Handle::from_memory(svg_content.into_bytes());
@@ -116,7 +119,7 @@ impl TreeNode {
                 right: 0.0,
                 bottom: 5.0,
                 left: 5.0,
-            }) // 添加 5 像素的内边距
+            })
             .into()
     }
 
@@ -137,10 +140,8 @@ impl TreeNode {
                     NodeMessage::Toggle,
                 ));
 
-        // 添加类型 SVG
         let type_svg = self.type_svg();
 
-        // 标签
         let label = button(self.name.as_str())
             .style(button::text)
             .on_press(Message::TreeNode(
