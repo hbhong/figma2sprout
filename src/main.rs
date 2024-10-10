@@ -182,8 +182,7 @@ impl Default for FigmaClient {
         FigmaClient::new()
     }
 }
-#[tokio::main]
-async fn main() {
+fn main() {
     let file_key = "";
     let access_token = "";
 
