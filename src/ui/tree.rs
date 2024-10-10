@@ -6,7 +6,7 @@ use iced::{
         svg::{Handle, Svg},
         text, Column, Container,
     },
-    Element, Font, Length,
+    Element, Font, Length, Padding,
 };
 
 use std::fs;
@@ -115,7 +115,7 @@ impl TreeNode {
         let svg = Svg::new(handle).width(Length::Fixed(20.0));
 
         Container::new(svg)
-            .padding(iced::Padding { top: 5.0, right: 0.0, bottom: 5.0, left: 5.0 })
+            .padding(Padding { top: 5.0, right: 0.0, bottom: 5.0, left: 5.0 })
             .into()
     }
 
