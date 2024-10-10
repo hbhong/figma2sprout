@@ -8,8 +8,8 @@ use crate::schema::File as FigmaFile;
 use iced::advanced::Widget;
 use iced::application::View;
 use iced::theme;
-use iced::widget::{column, container, text_input, Button};
-use iced::{Element, Font, Pixels, Task, Theme};
+use iced::widget::{column, container, row, text_input, Button};
+use iced::{Alignment, Element, Font, Length, Pixels, Task, Theme};
 use iced_widget::{button, scrollable};
 use std::error::Error;
 use std::fs::File;
@@ -142,6 +142,18 @@ impl FigmaClient {
                 }
                 Task::none()
             },
+            Message::JsonFetched(result) => {
+                self.fetching = false;
+                match result {
+                    Ok(message) => {
+                        println!("{}", message);
+                    },
+                    Err(error) => {
+                        println!("Error: {}", error);
+                    },
+                }
+                Task::none()
+            },
             _ => Task::none(),
         }
     }
@@ -158,27 +170,43 @@ impl FigmaClient {
             })
             .padding(5)
             .size(20);
+
         let file_id_input = text_input("File id", &self.file_id)
             .on_input(Message::FileIDChanged)
-            .padding(5.)
+            .padding(5)
             .size(20);
-        let mut column = column!(token_input, file_id_input).spacing(10);
-        let parse_button = button(if self.fetching { "Fetching..." } else { "Parse" })
-            .on_press(Message::ParseJson)
-            .style(if self.fetching { button::secondary } else { button::primary });
+
+        let inputs_column = column![token_input, file_id_input]
+            .spacing(10)
+            .width(Length::FillPortion(3));
+
         let fetch_button: Button<'_, Message> =
             button(if self.fetching { "Fetching..." } else { "Fetch" })
                 .on_press(Message::FetchJson)
                 .style(if self.fetching { button::secondary } else { button::primary });
-        column = column.push(fetch_button).push(parse_button);
+
+        let button_column = column![fetch_button]
+            .width(Length::FillPortion(1))
+            .align_x(Alignment::Center);
+
+        let input_row = row![inputs_column, button_column]
+            .spacing(20)
+            .align_y(Alignment::Center);
+
+        let parse_button = button("Parse")
+            .on_press(Message::ParseJson)
+            .style({ button::primary });
+
+        let mut main_column = column![input_row, parse_button].spacing(10);
+
         if let Some(root_node) = &self.root_node {
             for node in root_node {
                 let tree_container = container(scrollable(node.view()));
-                column = column.push(tree_container);
+                main_column = main_column.push(tree_container);
             }
         };
 
-        container(column).padding(10).into()
+        container(main_column).padding(10).into()
     }
 }
 impl Default for FigmaClient {
