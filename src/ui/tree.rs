@@ -1,5 +1,7 @@
-use crate::schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType};
-use crate::Message;
+use crate::{
+    schema::{File as FigmaFile, Node as FigmaNode, NodeType as FigmaNodeType},
+    Message,
+};
 use iced::{
     widget::{
         button, horizontal_space, row,
@@ -9,8 +11,7 @@ use iced::{
     Element, Font, Length,
 };
 
-use std::fs;
-use std::sync::Arc;
+use std::{fs, sync::Arc};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum NodeMessage {

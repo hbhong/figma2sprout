@@ -1,11 +1,12 @@
-use std::sync::Arc;
-use crate::schema::{File, Node};
+use crate::{
+    schema::{File, Node},
+    ui::tree::TreeNode,
+};
 use serde_json::from_str;
-use crate::ui::tree::TreeNode;
+use std::sync::Arc;
 
 pub fn convert_json_to_figma(json: String) -> Result<File, String> {
-    let file = from_str(&json)
-        .map_err(|e| e.to_string());
+    let file = from_str(&json).map_err(|e| e.to_string());
     file
 }
 pub fn find_figma_node(file: &Arc<File>, paths: String) -> Option<&Node> {
