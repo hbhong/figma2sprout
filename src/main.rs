@@ -45,6 +45,7 @@ pub enum Message {
     FileIDChanged(String),
     TreeNode(String, NodeMessage),
     ParseJson,
+    FetchJson,
     JsonFetched(Result<String, String>),
     JsonIsParsed(Result<Vec<TreeNode>, String>),
 }
@@ -98,15 +99,15 @@ impl FigmaClient {
                 }
                 Task::none()
             },
-            Message::ParseJson => {
+            Message::FetchJson => {
                 if !self.fetching {
                     self.fetching = true;
                     let token = self.token.clone();
                     let file_id = self.file_id.clone();
                     Task::perform(
                         async move {
-                            match figma_api::fetch_figma_file(&file_id, &token).await {
-                                Ok(json) => Ok(json),
+                            match fetch_save_figma_file(&file_id, &token, "demo.json").await {
+                                Ok(()) => Ok("File successfully saved".to_string()),
                                 Err(e) => Err(e.to_string()),
                             }
                         },
@@ -116,25 +117,24 @@ impl FigmaClient {
                     Task::none()
                 }
             },
-            Message::JsonFetched(result) => {
-                self.fetching = false;
-                match result {
-                    Ok(json) => match convert_json_to_figma(json) {
+            Message::ParseJson => {
+                if let Ok(json) = read_json_file("demo.json") {
+                    match convert_json_to_figma(json) {
                         Ok(figma_file) => {
                             let figma_file = Arc::new(figma_file);
                             self.figma_file = Some(figma_file.clone());
-                            Task::perform(parse_file_to_tree(figma_file), Message::JsonIsParsed)
+                            let result = Task::perform(
+                                parse_file_to_tree(figma_file),
+                                Message::JsonIsParsed,
+                            );
+                            return result;
                         },
                         Err(e) => {
-                            println!("Error converting JSON to Figma file: {}", e);
-                            Task::none()
+                            println!("{}", e);
                         },
-                    },
-                    Err(e) => {
-                        println!("Error fetching Figma file: {}", e);
-                        Task::none()
-                    },
+                    }
                 }
+                Task::none()
             },
             Message::JsonIsParsed(result) => {
                 if let Ok(nodes) = result {
@@ -166,7 +166,11 @@ impl FigmaClient {
         let parse_button = button(if self.fetching { "Fetching..." } else { "Parse" })
             .on_press(Message::ParseJson)
             .style(if self.fetching { button::secondary } else { button::primary });
-        column = column.push(parse_button);
+        let fetch_button: Button<'_, Message> =
+            button(if self.fetching { "Fetching..." } else { "Fetch" })
+                .on_press(Message::FetchJson)
+                .style(if self.fetching { button::secondary } else { button::primary });
+        column = column.push(fetch_button).push(parse_button);
         if let Some(root_node) = &self.root_node {
             for node in root_node {
                 let tree_container = container(scrollable(node.view()));
