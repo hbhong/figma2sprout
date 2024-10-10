@@ -1,5 +1,5 @@
 use crate::{
-    schema::{File, Node},
+    schema::{File, Node, NodeType},
     ui::tree::TreeNode,
 };
 use serde_json::from_str;
@@ -38,6 +38,31 @@ fn find_node<'a>(node: &'a Node, paths: Vec<&str>) -> Option<&'a Node> {
                             return Some(found);
                         }
                     }
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn find_node_from_children<'a>(
+    node: &'a Node,
+    node_name: &str,
+    node_type: NodeType,
+    cur_depth: usize,
+    max_depth: usize,
+) -> Option<&'a Node> {
+    if let Some(children) = &node.children {
+        let cur_depth = cur_depth + 1;
+        if cur_depth <= max_depth {
+            for child in children {
+                if child.r#type == node_type && child.name == node_name {
+                    return Some(child);
+                }
+                if let Some(value) =
+                    find_node_from_children(child, node_name, node_type, cur_depth, max_depth)
+                {
+                    return Some(value);
                 }
             }
         }

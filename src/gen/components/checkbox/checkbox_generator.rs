@@ -4,9 +4,9 @@ use crate::{
         components::checkbox::ComponentCheckbox,
     },
     get_value_from_properties,
-    schema::{ComponentProperty, Node, NodeType},
+    schema::{Node, NodeType},
 };
-use serde_json::Value;
+use crate::gen::node_util::find_node_from_children;
 
 pub struct CheckboxGenerator {}
 
@@ -14,29 +14,7 @@ impl CheckboxGenerator {
     pub fn new() -> Self {
         CheckboxGenerator {}
     }
-    pub fn get_name_from_children(
-        node: &Node,
-        node_type: NodeType,
-        cur_depth: usize,
-        max_depth: usize,
-    ) -> Option<String> {
-        if let Some(children) = &node.children {
-            let cur_depth = cur_depth + 1;
-            if cur_depth <= max_depth {
-                for child in children {
-                    if child.r#type == node_type {
-                        return Some(child.name.clone());
-                    }
-                    if let Some(value) =
-                        Self::get_name_from_children(child, node_type, cur_depth, max_depth)
-                    {
-                        return Some(value);
-                    }
-                }
-            }
-        }
-        None
-    }
+
 }
 impl ComponentGenerator for CheckboxGenerator {
     fn can_gen_component(&self, node: &Node) -> bool {
@@ -56,7 +34,11 @@ impl ComponentGenerator for CheckboxGenerator {
             .unwrap()
             .as_str()
             .into();
-        checkbox.label = Self::get_name_from_children(node, NodeType::Text, 0, 1);
+        if let Some(label_node) = find_node_from_children(node, "Label", NodeType::Text, 0, 1) {
+            if let Some(label) = &label_node.characters {
+                checkbox.label = Some(label.clone());
+            }
+        }
 
         Box::new(checkbox)
     }

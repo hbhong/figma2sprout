@@ -44,4 +44,5 @@ pub struct Node {
     pub children: Option<Vec<Node>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub component_properties: Option<HashMap<String, ComponentProperty>>,
+    pub characters: Option<String>,
 }
