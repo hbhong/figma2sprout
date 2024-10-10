@@ -146,13 +146,14 @@ impl FigmaClient {
                 self.fetching = false;
                 match result {
                     Ok(message) => {
-                        println!("{}", message);
+                        println!("json fetched: {}", message);
+                        Task::perform(async {}, |_| Message::ParseJson)
                     },
                     Err(error) => {
                         println!("Error: {}", error);
+                        Task::none()
                     },
                 }
-                Task::none()
             },
             _ => Task::none(),
         }
