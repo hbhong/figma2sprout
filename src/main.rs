@@ -1,58 +1,33 @@
+mod figma_api;
 mod gen;
 mod schema;
 mod ui;
-
-use crate::{
-    gen::{
-        component_generator::Generators,
-        node_util::{convert_json_to_figma, find_figma_node},
-    },
-    schema::File as FigmaFile,
-};
-use gen::components::checkbox::ComponentCheckbox;
-use iced::{
-    advanced::Widget,
-    application::View,
-    widget::{column, container, text_input},
-    Element, Font, Pixels, Task,
-};
+use iced::advanced::Widget;
+use iced::application::View;
+use iced::widget::{column, container, row, text_input, Button};
+use iced::{Alignment, Element, Font, Length, Pixels, Task, Theme};
 use iced_widget::{button, scrollable};
-use reqwest::blocking::Client;
-use std::{
-    error::Error,
-    fs::File,
-    io::{Read, Write},
-    sync::Arc,
-};
-use ui::tree::{parse_file_to_tree, NodeMessage, TreeNode};
+use std::error::Error;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::sync::Arc;
+use crate::schema::File as FigmaFile;
+use crate::gen::component_generator::Generators;
+use crate::ui::tree::{parse_file_to_tree, NodeMessage, TreeNode};
+use crate::gen::node_util::{convert_json_to_figma, find_figma_node};
 
-fn fetch_figma_file(
-    file_key: &str,
-    access_token: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let client = Client::new();
-    let url = format!("https://api.figma.com/v1/files/{}", file_key);
-    // let params = [("ids", "2-2336")];
-    let response = client
-        .get(&url)
-        .header("X-Figma-Token", access_token)
-        // .query(&params)
-        .send()?
-        .text()?;
-    Ok(response)
-}
 fn save_to_file(data: &str, file_path: &str) -> Result<(), Box<dyn Error>> {
     let mut file = File::create(file_path)?;
 
     file.write_all(data.as_bytes())?;
     Ok(())
 }
-fn fetch_save_figma_file(
+async fn fetch_save_figma_file(
     file_key: &str,
     access_token: &str,
     file_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let response = fetch_figma_file(file_key, access_token)?;
+    let response = figma_api::fetch_figma_file(file_key, access_token).await?;
     save_to_file(&response, file_path)
 }
 fn read_json_file(file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -69,15 +44,20 @@ pub enum Message {
     FileIDChanged(String),
     TreeNode(String, NodeMessage),
     ParseJson,
+    FetchJson,
+    JsonFetched(Result<String, String>),
     JsonIsParsed(Result<Vec<TreeNode>, String>),
 }
+
 pub struct FigmaClient {
     pub token: String,
     pub file_id: String,
     pub root_node: Option<Vec<TreeNode>>,
     figma_file: Option<Arc<FigmaFile>>,
+    fetching: bool,
     generators: Generators,
 }
+
 impl FigmaClient {
     pub fn new() -> Self {
         let mut generators = Generators::new();
@@ -88,6 +68,7 @@ impl FigmaClient {
             file_id: String::new(),
             root_node: Some(vec![]),
             figma_file: None,
+            fetching: false,
             generators,
         }
     }
@@ -133,6 +114,24 @@ impl FigmaClient {
                 }
                 Task::none()
             },
+            Message::FetchJson => {
+                if !self.fetching {
+                    self.fetching = true;
+                    let token = self.token.clone();
+                    let file_id = self.file_id.clone();
+                    Task::perform(
+                        async move {
+                            match fetch_save_figma_file(&file_id, &token, "demo.json").await {
+                                Ok(()) => Ok("File successfully saved".to_string()),
+                                Err(e) => Err(e.to_string()),
+                            }
+                        },
+                        Message::JsonFetched,
+                    )
+                } else {
+                    Task::none()
+                }
+            },
             Message::ParseJson => {
                 if let Ok(json) = read_json_file("demo.json") {
                     match convert_json_to_figma(json) {
@@ -158,6 +157,19 @@ impl FigmaClient {
                 }
                 Task::none()
             },
+            Message::JsonFetched(result) => {
+                self.fetching = false;
+                match result {
+                    Ok(message) => {
+                        println!("json fetched: {}", message);
+                        Task::perform(async {}, |_| Message::ParseJson)
+                    },
+                    Err(error) => {
+                        println!("Error: {}", error);
+                        Task::none()
+                    },
+                }
+            },
             _ => Task::none(),
         }
     }
@@ -174,21 +186,43 @@ impl FigmaClient {
             })
             .padding(5)
             .size(20);
+
         let file_id_input = text_input("File id", &self.file_id)
             .on_input(Message::FileIDChanged)
-            .padding(5.)
+            .padding(5)
             .size(20);
-        let mut column = column!(token_input, file_id_input).spacing(10);
-        let parse_button = button("Parse").on_press(Message::ParseJson);
-        column = column.push(parse_button);
+
+        let inputs_column = column![token_input, file_id_input]
+            .spacing(10)
+            .width(Length::FillPortion(3));
+
+        let fetch_button: Button<'_, Message> =
+            button(if self.fetching { "Fetching..." } else { "Fetch" })
+                .on_press(Message::FetchJson)
+                .style(if self.fetching { button::secondary } else { button::primary });
+
+        let button_column = column![fetch_button]
+            .width(Length::FillPortion(1))
+            .align_x(Alignment::Center);
+
+        let input_row = row![inputs_column, button_column]
+            .spacing(20)
+            .align_y(Alignment::Center);
+
+        let parse_button = button("Parse")
+            .on_press(Message::ParseJson)
+            .style({ button::primary });
+
+        let mut main_column = column![input_row, parse_button].spacing(10);
+
         if let Some(root_node) = &self.root_node {
             for node in root_node {
                 let tree_container = container(scrollable(node.view()));
-                column = column.push(tree_container);
+                main_column = main_column.push(tree_container);
             }
         };
 
-        container(column).padding(10).into()
+        container(main_column).padding(10).into()
     }
 }
 impl Default for FigmaClient {
