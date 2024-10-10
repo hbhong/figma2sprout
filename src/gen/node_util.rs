@@ -1,11 +1,12 @@
-use std::sync::Arc;
-use crate::schema::{File, Node};
+use crate::{
+    schema::{File, Node, NodeType},
+    ui::tree::TreeNode,
+};
 use serde_json::from_str;
-use crate::ui::tree::TreeNode;
+use std::sync::Arc;
 
 pub fn convert_json_to_figma(json: String) -> Result<File, String> {
-    let file = from_str(&json)
-        .map_err(|e| e.to_string());
+    let file = from_str(&json).map_err(|e| e.to_string());
     file
 }
 pub fn find_figma_node(file: &Arc<File>, paths: String) -> Option<&Node> {
@@ -37,6 +38,31 @@ fn find_node<'a>(node: &'a Node, paths: Vec<&str>) -> Option<&'a Node> {
                             return Some(found);
                         }
                     }
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn find_node_from_children<'a>(
+    node: &'a Node,
+    node_name: &str,
+    node_type: NodeType,
+    cur_depth: usize,
+    max_depth: usize,
+) -> Option<&'a Node> {
+    if let Some(children) = &node.children {
+        let cur_depth = cur_depth + 1;
+        if cur_depth <= max_depth {
+            for child in children {
+                if child.r#type == node_type && child.name == node_name {
+                    return Some(child);
+                }
+                if let Some(value) =
+                    find_node_from_children(child, node_name, node_type, cur_depth, max_depth)
+                {
+                    return Some(value);
                 }
             }
         }

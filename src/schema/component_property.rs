@@ -15,3 +15,31 @@ pub struct ComponentProperty {
     #[serde(rename = "type")]
     value_type: ComponentPropertyType,
 }
+impl Into<Option<String>> for &ComponentProperty {
+    fn into(self) -> Option<String> {
+        match self.value_type {
+            ComponentPropertyType::Variant | ComponentPropertyType::Text => {
+                if let Value::String(value) = &self.value {
+                    Some(value.clone())
+                } else {
+                    None
+                }
+            },
+            _ => None,
+        }
+    }
+}
+impl Into<Option<bool>> for &ComponentProperty {
+    fn into(self) -> Option<bool> {
+        match self.value_type {
+            ComponentPropertyType::Boolean => {
+                if let Value::Bool(value) = &self.value {
+                    Some(value.clone())
+                } else {
+                    None
+                }
+            },
+            _ => None,
+        }
+    }
+}

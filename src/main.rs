@@ -2,12 +2,8 @@ mod figma_api;
 mod gen;
 mod schema;
 mod ui;
-
-use crate::gen::node_util::{convert_json_to_figma, find_figma_node};
-use crate::schema::File as FigmaFile;
 use iced::advanced::Widget;
 use iced::application::View;
-use iced::theme;
 use iced::widget::{column, container, row, text_input, Button};
 use iced::{Alignment, Element, Font, Length, Pixels, Task, Theme};
 use iced_widget::{button, scrollable};
@@ -15,7 +11,10 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sync::Arc;
-use ui::tree::{parse_file_to_tree, NodeMessage, TreeNode};
+use crate::schema::File as FigmaFile;
+use crate::gen::component_generator::Generators;
+use crate::ui::tree::{parse_file_to_tree, NodeMessage, TreeNode};
+use crate::gen::node_util::{convert_json_to_figma, find_figma_node};
 
 fn save_to_file(data: &str, file_path: &str) -> Result<(), Box<dyn Error>> {
     let mut file = File::create(file_path)?;
@@ -56,10 +55,13 @@ pub struct FigmaClient {
     pub root_node: Option<Vec<TreeNode>>,
     figma_file: Option<Arc<FigmaFile>>,
     fetching: bool,
+    generators: Generators,
 }
 
 impl FigmaClient {
     pub fn new() -> Self {
+        let mut generators = Generators::new();
+        generators.register_generators();
         FigmaClient {
             // token: String::new(),
             token: "".to_string(),
@@ -67,6 +69,7 @@ impl FigmaClient {
             root_node: Some(vec![]),
             figma_file: None,
             fetching: false,
+            generators,
         }
     }
     fn update(&mut self, event: Message) -> Task<Message> {
@@ -89,6 +92,18 @@ impl FigmaClient {
                                     found_child.node_paths.clone(),
                                 ) {
                                     println!("{}", figma_node.name);
+                                    if let Some(component) =
+                                        self.generators.gen_component(figma_node)
+                                    {
+                                        println!("{:?}", component.name());
+
+                                        // An example to convert component trait to object
+                                        // if let Some(checkbox) =
+                                        //     component.as_any().downcast_ref::<ComponentCheckbox>()
+                                        // {
+                                        //     println!("{:?}", checkbox);
+                                        // }
+                                    }
                                 }
                             }
                             found_child.update(msg);
